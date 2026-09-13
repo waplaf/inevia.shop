@@ -1,0 +1,1 @@
+import {Footer} from "@/components/store/Footer";import {Header} from "@/components/store/Header";export default function StoreLayout({children}:{children:React.ReactNode}){return <><Header/><main>{children}</main><Footer/></>}

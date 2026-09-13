@@ -1,0 +1,83 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+enum Role { SUPER_ADMIN ADMIN PRODUCT_MANAGER ORDER_MANAGER CUSTOMER }
+enum ProductType { PHYSICAL DIGITAL }
+enum ProductStatus { DRAFT ACTIVE ARCHIVED }
+enum OrderStatus { PENDING CONFIRMED PROCESSING SHIPPED DELIVERED CANCELLED REFUNDED }
+enum PaymentStatus { PENDING AUTHORIZED PAID FAILED REFUNDED CANCELLED }
+enum PaymentMethod { STRIPE MPESA EMOLA BANK_TRANSFER CASH_ON_DELIVERY }
+enum ShipmentStatus { PENDING PREPARING SHIPPED IN_TRANSIT DELIVERED RETURNED CANCELLED }
+enum CouponType { PERCENTAGE FIXED FREE_SHIPPING }
+
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  passwordHash String
+  name String
+  phone String?
+  role Role @default(CUSTOMER)
+  active Boolean @default(true)
+  addresses Address[]
+  orders Order[]
+  carts Cart[]
+  reviews Review[]
+  wishlist Wishlist?
+  couponUsages CouponUsage[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([role, active])
+}
+model Product {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  shortDescription String
+  description String
+  type ProductType @default(PHYSICAL)
+  status ProductStatus @default(DRAFT)
+  price Decimal @db.Decimal(12,2)
+  salePrice Decimal? @db.Decimal(12,2)
+  currency String @default("MZN")
+  sku String @unique
+  barcode String?
+  weight Decimal? @db.Decimal(10,3)
+  stock Int @default(0)
+  trackStock Boolean @default(true)
+  featured Boolean @default(false)
+  onSale Boolean @default(false)
+  brandId String?
+  brand Brand? @relation(fields:[brandId], references:[id], onDelete:SetNull)
+  categories ProductCategory[]
+  variants ProductVariant[]
+  images ProductImage[]
+  orderItems OrderItem[]
+  cartItems CartItem[]
+  reviews Review[]
+  wishlistItems WishlistItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, featured])
+  @@index([brandId, status])
+  @@index([createdAt])
+}
+model ProductVariant { id String @id @default(cuid()) productId String product Product @relation(fields:[productId],references:[id],onDelete:Cascade) name String sku String @unique price Decimal? @db.Decimal(12,2) stock Int @default(0) attributes Json imageUrl String? active Boolean @default(true) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([productId,active]) }
+model ProductImage { id String @id @default(cuid()) productId String product Product @relation(fields:[productId],references:[id],onDelete:Cascade) url String alt String sortOrder Int @default(0) primary Boolean @default(false) width Int? height Int? createdAt DateTime @default(now()) @@index([productId,sortOrder]) }
+model Category { id String @id @default(cuid()) name String slug String @unique description String? imageUrl String? parentId String? parent Category? @relation("CategoryTree",fields:[parentId],references:[id],onDelete:SetNull) children Category[] @relation("CategoryTree") products ProductCategory[] active Boolean @default(true) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([parentId,active]) }
+model ProductCategory { productId String categoryId String product Product @relation(fields:[productId],references:[id],onDelete:Cascade) category Category @relation(fields:[categoryId],references:[id],onDelete:Cascade) @@id([productId,categoryId]) }
+model Brand { id String @id @default(cuid()) name String slug String @unique logoUrl String? description String? active Boolean @default(true) products Product[] createdAt DateTime @default(now()) updatedAt DateTime @updatedAt }
+model Cart { id String @id @default(cuid()) userId String? user User? @relation(fields:[userId],references:[id],onDelete:Cascade) sessionId String? items CartItem[] couponCode String? expiresAt DateTime? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([userId]) @@index([sessionId]) }
+model CartItem { id String @id @default(cuid()) cartId String productId String variantId String? quantity Int @default(1) unitPrice Decimal @db.Decimal(12,2) cart Cart @relation(fields:[cartId],references:[id],onDelete:Cascade) product Product @relation(fields:[productId],references:[id],onDelete:Cascade) @@unique([cartId,productId,variantId]) }
+model Address { id String @id @default(cuid()) userId String user User @relation(fields:[userId],references:[id],onDelete:Cascade) label String? firstName String lastName String phone String address1 String address2 String? city String province String? postalCode String? country String @default("MZ") defaultShipping Boolean @default(false) defaultBilling Boolean @default(false) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([userId]) }
+model Order { id String @id @default(cuid()) number String @unique userId String? user User? @relation(fields:[userId],references:[id],onDelete:SetNull) email String status OrderStatus @default(PENDING) currency String @default("MZN") subtotal Decimal @db.Decimal(12,2) discount Decimal @default(0) @db.Decimal(12,2) shipping Decimal @default(0) @db.Decimal(12,2) tax Decimal @default(0) @db.Decimal(12,2) total Decimal @db.Decimal(12,2) shippingAddress Json billingAddress Json notes String? items OrderItem[] payment Payment? shipment Shipment? couponUsages CouponUsage[] createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([userId,createdAt]) @@index([status,createdAt]) }
+model OrderItem { id String @id @default(cuid()) orderId String productId String? order Order @relation(fields:[orderId],references:[id],onDelete:Cascade) product Product? @relation(fields:[productId],references:[id],onDelete:SetNull) variantId String? name String sku String imageUrl String? quantity Int unitPrice Decimal @db.Decimal(12,2) total Decimal @db.Decimal(12,2) @@index([orderId]) }
+model Coupon { id String @id @default(cuid()) code String @unique type CouponType value Decimal @db.Decimal(12,2) minPurchase Decimal? @db.Decimal(12,2) maxDiscount Decimal? @db.Decimal(12,2) usageLimit Int? perUserLimit Int? active Boolean @default(true) startsAt DateTime? endsAt DateTime? usages CouponUsage[] createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([active,startsAt,endsAt]) }
+model CouponUsage { id String @id @default(cuid()) couponId String userId String? orderId String coupon Coupon @relation(fields:[couponId],references:[id],onDelete:Restrict) user User? @relation(fields:[userId],references:[id],onDelete:SetNull) order Order @relation(fields:[orderId],references:[id],onDelete:Cascade) usedAt DateTime @default(now()) @@unique([couponId,orderId]) @@index([userId,couponId]) }
+model Banner { id String @id @default(cuid()) title String subtitle String? imageUrl String ctaLabel String? ctaUrl String? position String @default("home-hero") active Boolean @default(true) startsAt DateTime? endsAt DateTime? sortOrder Int @default(0) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([position,active,sortOrder]) }
+model Page { id String @id @default(cuid()) title String slug String @unique excerpt String? content String published Boolean @default(false) seoTitle String? seoDescription String? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([published]) }
+model StoreSettings { id String @id @default("default") name String @default("Inevia.shop") logoUrl String? email String? phone String? address String? currency String @default("MZN") socialLinks Json? paymentMethods Json shippingMethods Json taxRate Decimal @default(0) @db.Decimal(5,2) freeShippingAbove Decimal? @db.Decimal(12,2) updatedAt DateTime @updatedAt }
+model Review { id String @id @default(cuid()) productId String userId String product Product @relation(fields:[productId],references:[id],onDelete:Cascade) user User @relation(fields:[userId],references:[id],onDelete:Cascade) rating Int title String? comment String approved Boolean @default(false) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@unique([productId,userId]) @@index([productId,approved]) }
+model Wishlist { id String @id @default(cuid()) userId String @unique user User @relation(fields:[userId],references:[id],onDelete:Cascade) items WishlistItem[] createdAt DateTime @default(now()) updatedAt DateTime @updatedAt }
+model WishlistItem { id String @id @default(cuid()) wishlistId String productId String wishlist Wishlist @relation(fields:[wishlistId],references:[id],onDelete:Cascade) product Product @relation(fields:[productId],references:[id],onDelete:Cascade) createdAt DateTime @default(now()) @@unique([wishlistId,productId]) }
+model Payment { id String @id @default(cuid()) orderId String @unique order Order @relation(fields:[orderId],references:[id],onDelete:Cascade) method PaymentMethod status PaymentStatus @default(PENDING) providerReference String? amount Decimal @db.Decimal(12,2) currency String @default("MZN") metadata Json? paidAt DateTime? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([method,status]) }
+model Shipment { id String @id @default(cuid()) orderId String @unique order Order @relation(fields:[orderId],references:[id],onDelete:Cascade) status ShipmentStatus @default(PENDING) carrier String? method String trackingCode String? trackingUrl String? city String? cost Decimal @default(0) @db.Decimal(12,2) shippedAt DateTime? deliveredAt DateTime? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([status]) }
