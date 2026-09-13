@@ -5,11 +5,17 @@ Plataforma de e-commerce full-stack para Moçambique, construída com Next.js 16
 ## Arquitectura
 
 - `src/app/(store)`: páginas públicas renderizadas no servidor e optimizadas para SEO.
-- `src/app/admin`: CMS e dashboard; em produção, o layout exige sessão administrativa.
+- `src/app/admin`: CMS e dashboard; o layout exige sessão e vínculo administrativo activo com a loja.
 - `src/app/api`: Route Handlers validados com Zod.
 - `src/lib`: acesso Prisma, sessão JWT em cookie HTTP-only e integrações server-only.
 - `src/components`: UI reutilizável da loja, checkout e administração.
 - `prisma`: schema relacional, migrations e dados de demonstração.
+
+### Preparação multi-loja
+
+A instalação começa com uma única loja (`inevia-shop`), pertencente ao administrador do seed. O domínio já isola dados comerciais por `Store`: produtos, categorias, marcas, carrinhos, pedidos, cupões, conteúdos, configurações, avaliações e favoritos têm `storeId`. Slugs, SKUs, números de pedido e códigos promocionais são únicos dentro da loja, e não globalmente. `StoreMembership` associa utilizadores a cada loja com uma função própria, permitindo que no futuro uma mesma conta administre marcas diferentes sem misturar dados.
+
+`CURRENT_STORE_SLUG` escolhe a loja apresentada pelo storefront nesta fase. Todo novo acesso à base deve obter o identificador através de `getCurrentStore()` e incluir `storeId` no filtro. Quando for aberto o registo de novas marcas, esse resolver poderá passar a usar o domínio ou subdomínio do pedido sem alterar a camada de catálogo. Pedidos usam eliminação restrita para preservar o histórico mesmo que uma loja seja desactivada.
 
 Não existe dependência do BigCommerce, Shopify ou CMS externo. O padrão visual e de navegação é inspirado no Next.js Commerce, mas a persistência pertence integralmente à aplicação.
 
@@ -20,7 +26,7 @@ Requer Node.js 20.9+ e PostgreSQL 15+.
 ```bash
 npm install
 cp .env.example .env
-# edite DATABASE_URL e gere AUTH_SECRET: openssl rand -base64 32
+# edite DATABASE_URL, CURRENT_STORE_SLUG e gere AUTH_SECRET: openssl rand -base64 32
 npm run db:migrate
 npm run db:seed
 npm run dev

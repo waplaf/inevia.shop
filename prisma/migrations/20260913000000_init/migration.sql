@@ -1,4 +1,7 @@
 -- Initial Inevia.shop schema. Generated from prisma/schema.prisma.
+-- This enum bootstrap is retained for the original scaffold. Before the first
+-- database deployment, regenerate the baseline from the complete multi-store
+-- schema with: prisma migrate reset (development) / prisma migrate diff.
 CREATE TYPE "Role" AS ENUM ('SUPER_ADMIN','ADMIN','PRODUCT_MANAGER','ORDER_MANAGER','CUSTOMER');
 CREATE TYPE "ProductType" AS ENUM ('PHYSICAL','DIGITAL');
 CREATE TYPE "ProductStatus" AS ENUM ('DRAFT','ACTIVE','ARCHIVED');

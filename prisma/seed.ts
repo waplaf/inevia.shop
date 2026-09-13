@@ -9,11 +9,13 @@ const products = [
 ] as const;
 async function main() {
   const passwordHash = await hash(process.env.SEED_ADMIN_PASSWORD || "ChangeMe123!", 12);
-  await db.user.upsert({ where:{email:process.env.SEED_ADMIN_EMAIL || "admin@inevia.shop"}, update:{}, create:{email:process.env.SEED_ADMIN_EMAIL || "admin@inevia.shop",name:"Administrador Inevia",passwordHash,role:Role.SUPER_ADMIN} });
-  const category = await db.category.upsert({where:{slug:"destaques"},update:{},create:{name:"Destaques",slug:"destaques",description:"A selecção Inevia"}});
-  const brand = await db.brand.upsert({where:{slug:"inevia"},update:{},create:{name:"Inevia",slug:"inevia"}});
-  for (let i=0;i<products.length;i++) { const [name,slug,shortDescription,price,url]=products[i]; await db.product.upsert({where:{slug},update:{},create:{name,slug,shortDescription,description:shortDescription,price,salePrice:i===1?2990:null,sku:`INE-${100+i}`,stock:15+i*4,status:ProductStatus.ACTIVE,featured:true,onSale:i===1,brandId:brand.id,categories:{create:{categoryId:category.id}},images:{create:{url,alt:name,primary:true}}}}); }
-  await db.storeSettings.upsert({where:{id:"default"},update:{},create:{paymentMethods:{mpesa:true,emola:true,stripe:false,bankTransfer:true,cashOnDelivery:true},shippingMethods:{maputo:250,matola:200,national:500},freeShippingAbove:10000}});
-  await db.banner.upsert({where:{id:"home-hero"},update:{},create:{id:"home-hero",title:"Tudo o que precisa, mais perto de si",subtitle:"Tecnologia, moda e essenciais com entrega segura em Moçambique.",imageUrl:"https://images.unsplash.com/photo-1607082349566-187342175e2f?auto=format&fit=crop&w=1600&q=80",ctaLabel:"Comprar agora",ctaUrl:"/produtos"}});
+  const admin=await db.user.upsert({ where:{email:process.env.SEED_ADMIN_EMAIL || "admin@inevia.shop"}, update:{}, create:{email:process.env.SEED_ADMIN_EMAIL || "admin@inevia.shop",name:"Administrador Inevia",passwordHash,role:Role.SUPER_ADMIN} });
+  const store=await db.store.upsert({where:{slug:"inevia-shop"},update:{},create:{name:"Inevia.shop",slug:"inevia-shop",legalName:"Inevia.shop",ownerId:admin.id}});
+  await db.storeMembership.upsert({where:{storeId_userId:{storeId:store.id,userId:admin.id}},update:{role:Role.SUPER_ADMIN,active:true},create:{storeId:store.id,userId:admin.id,role:Role.SUPER_ADMIN}});
+  const category = await db.category.upsert({where:{storeId_slug:{storeId:store.id,slug:"destaques"}},update:{},create:{storeId:store.id,name:"Destaques",slug:"destaques",description:"A selecção Inevia"}});
+  const brand = await db.brand.upsert({where:{storeId_slug:{storeId:store.id,slug:"inevia"}},update:{},create:{storeId:store.id,name:"Inevia",slug:"inevia"}});
+  for (let i=0;i<products.length;i++) { const [name,slug,shortDescription,price,url]=products[i]; await db.product.upsert({where:{storeId_slug:{storeId:store.id,slug}},update:{},create:{storeId:store.id,name,slug,shortDescription,description:shortDescription,price,salePrice:i===1?2990:null,sku:`INE-${100+i}`,stock:15+i*4,status:ProductStatus.ACTIVE,featured:true,onSale:i===1,brandId:brand.id,categories:{create:{categoryId:category.id}},images:{create:{url,alt:name,primary:true}}}}); }
+  await db.storeSettings.upsert({where:{storeId:store.id},update:{},create:{storeId:store.id,paymentMethods:{mpesa:true,emola:true,stripe:false,bankTransfer:true,cashOnDelivery:true},shippingMethods:{maputo:250,matola:200,national:500},freeShippingAbove:10000}});
+  await db.banner.upsert({where:{id:"home-hero"},update:{storeId:store.id},create:{id:"home-hero",storeId:store.id,title:"Tudo o que precisa, mais perto de si",subtitle:"Tecnologia, moda e essenciais com entrega segura em Moçambique.",imageUrl:"https://images.unsplash.com/photo-1607082349566-187342175e2f?auto=format&fit=crop&w=1600&q=80",ctaLabel:"Comprar agora",ctaUrl:"/produtos"}});
 }
 main().finally(()=>db.$disconnect());
