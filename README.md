@@ -23,6 +23,10 @@ O e-commerce continua a ser o produto principal. As estruturas de ponto de venda
 
 O seed cria somente a loja Inevia.shop e o seu armazém online; não activa terminais nem fluxos POS. `Product.stock` permanece como total compatível com o storefront nesta fase, enquanto `InventoryLevel` prepara a transição para stock por filial. Quando o POS for implementado, alterações de saldo deverão ocorrer numa transacção e gerar sempre um `StockMovement`; movimentos financeiros e documentos emitidos nunca devem ser apagados, apenas revertidos por novos registos.
 
+### Catálogo ligado ao PostgreSQL
+
+A home, pesquisa, listagem, página de produto e sitemap consultam agora o catálogo da loja actual através de Prisma. O CMS disponibiliza a listagem e criação em `/admin/produtos`; cada mutação valida a função do utilizador e inclui o `storeId` da sessão. A criação grava produto e saldo inicial do armazém na mesma transacção. Produtos removidos do catálogo são arquivados para preservar referências históricas.
+
 Não existe dependência do BigCommerce, Shopify ou CMS externo. O padrão visual e de navegação é inspirado no Next.js Commerce, mas a persistência pertence integralmente à aplicação.
 
 ## Instalação local
