@@ -4,6 +4,18 @@ Plataforma de e-commerce full-stack para Moçambique, construída com Next.js 16
 
 A interface segue a composição minimalista do storefront de referência, mantendo superfícies neutras, grelhas editoriais e navegação limpa; o verde Inevia é reservado para botões, foco e estados activos. Componentes interactivos acessíveis usam `@headlessui/react` e a iconografia consistente usa `@heroicons/react`.
 
+## Preview do design
+
+### Storefront, catálogo, produto, carrinho e checkout
+
+![Preview das páginas públicas](docs/previews/storefront.svg)
+
+### Dashboard e páginas do CMS
+
+![Preview das páginas administrativas](docs/previews/admin.svg)
+
+As pranchas permitem rever toda a linguagem visual directamente no GitHub. Consulte [`docs/previews`](docs/previews/README.md) para o mapa de páginas e as instruções de captura real no browser.
+
 ## Arquitectura
 
 - `src/app/(store)`: páginas públicas renderizadas no servidor e optimizadas para SEO.
