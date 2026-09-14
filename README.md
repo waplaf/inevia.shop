@@ -27,6 +27,10 @@ O seed cria somente a loja Inevia.shop e o seu armazém online; não activa term
 
 A home, pesquisa, listagem, página de produto e sitemap consultam agora o catálogo da loja actual através de Prisma. O CMS disponibiliza a listagem e criação em `/admin/produtos`; cada mutação valida a função do utilizador e inclui o `storeId` da sessão. A criação grava produto e saldo inicial do armazém na mesma transacção. Produtos removidos do catálogo são arquivados para preservar referências históricas.
 
+### Carrinho persistente
+
+O carrinho anónimo é identificado por cookies HTTP-only com validade de 30 dias. Preço, produto, variante, loja e disponibilidade são novamente verificados no servidor em cada adição; o browser envia somente identificadores e quantidade. A página `/carrinho` permite alterar quantidades, remover linhas e avançar para o checkout sem confiar em totais calculados pelo cliente.
+
 Não existe dependência do BigCommerce, Shopify ou CMS externo. O padrão visual e de navegação é inspirado no Next.js Commerce, mas a persistência pertence integralmente à aplicação.
 
 ## Instalação local
