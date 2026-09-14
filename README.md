@@ -2,6 +2,8 @@
 
 Plataforma de e-commerce full-stack para Moçambique, construída com Next.js 16, React 19, TypeScript, Tailwind CSS 4, PostgreSQL e Prisma. Inclui storefront responsivo, checkout local, CMS em `/admin`, RBAC, catálogo, carrinho, pedidos e adaptadores de pagamento.
 
+A interface segue a composição minimalista do storefront de referência, mantendo superfícies neutras, grelhas editoriais e navegação limpa; o verde Inevia é reservado para botões, foco e estados activos. Componentes interactivos acessíveis usam `@headlessui/react` e a iconografia consistente usa `@heroicons/react`.
+
 ## Arquitectura
 
 - `src/app/(store)`: páginas públicas renderizadas no servidor e optimizadas para SEO.
