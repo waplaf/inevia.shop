@@ -1,0 +1,1 @@
+export default function Loading(){return <div className="container animate-pulse py-12"><div className="h-10 w-64 rounded bg-green-100"/><div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4">{[1,2,3,4].map(x=><div key={x} className="aspect-square rounded-2xl bg-slate-200"/>)}</div></div>}

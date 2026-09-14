@@ -1,0 +1,316 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+enum Role { SUPER_ADMIN ADMIN STORE_MANAGER PRODUCT_MANAGER ORDER_MANAGER CASHIER CUSTOMER }
+enum ProductType { PHYSICAL DIGITAL }
+enum ProductStatus { DRAFT ACTIVE ARCHIVED }
+enum OrderStatus { PENDING CONFIRMED PROCESSING SHIPPED DELIVERED CANCELLED REFUNDED }
+enum PaymentStatus { PENDING AUTHORIZED PAID FAILED REFUNDED CANCELLED }
+enum PaymentMethod { STRIPE MPESA EMOLA BANK_TRANSFER CASH_ON_DELIVERY }
+enum ShipmentStatus { PENDING PREPARING SHIPPED IN_TRANSIT DELIVERED RETURNED CANCELLED }
+enum CouponType { PERCENTAGE FIXED FREE_SHIPPING }
+enum SalesChannel { ONLINE POS ADMIN MARKETPLACE }
+enum LocationType { STORE WAREHOUSE PICKUP_POINT }
+enum CashSessionStatus { OPEN CLOSED RECONCILED }
+enum CashMovementType { OPENING_FLOAT SALE REFUND CASH_IN CASH_OUT CLOSING_ADJUSTMENT }
+enum StockMovementType { PURCHASE SALE RETURN TRANSFER_IN TRANSFER_OUT ADJUSTMENT_IN ADJUSTMENT_OUT DAMAGE RESERVATION RELEASE }
+enum ReturnStatus { REQUESTED APPROVED RECEIVED REFUNDED REJECTED CANCELLED }
+enum ReceiptType { RECEIPT INVOICE CREDIT_NOTE }
+
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  passwordHash String
+  name String
+  phone String?
+  role Role @default(CUSTOMER)
+  active Boolean @default(true)
+  addresses Address[]
+  orders Order[]
+  carts Cart[]
+  reviews Review[]
+  wishlists Wishlist[]
+  couponUsages CouponUsage[]
+  memberships StoreMembership[]
+  ownedStores Store[] @relation("StoreOwner")
+  operatedOrders Order[] @relation("OrderCashier")
+  openedCashSessions CashSession[] @relation("CashSessionOpenedBy")
+  closedCashSessions CashSession[] @relation("CashSessionClosedBy")
+  cashMovements CashMovement[]
+  stockMovements StockMovement[]
+  processedPayments Payment[]
+  processedReturns Return[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([role, active])
+}
+model Store {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  legalName String?
+  domain String? @unique
+  active Boolean @default(true)
+  ownerId String
+  owner User @relation("StoreOwner", fields:[ownerId], references:[id], onDelete:Restrict)
+  memberships StoreMembership[]
+  products Product[]
+  productVariants ProductVariant[]
+  categories Category[]
+  brands Brand[]
+  carts Cart[]
+  orders Order[]
+  coupons Coupon[]
+  banners Banner[]
+  pages Page[]
+  settings StoreSettings?
+  reviews Review[]
+  wishlists Wishlist[]
+  locations Location[]
+  stockMovements StockMovement[]
+  returns Return[]
+  receipts Receipt[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([ownerId, active])
+}
+model StoreMembership {
+  id String @id @default(cuid())
+  storeId String
+  userId String
+  role Role
+  active Boolean @default(true)
+  store Store @relation(fields:[storeId], references:[id], onDelete:Cascade)
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([storeId, userId])
+  @@index([userId, active])
+}
+model Product {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields:[storeId], references:[id], onDelete:Cascade)
+  name String
+  slug String
+  shortDescription String
+  description String
+  type ProductType @default(PHYSICAL)
+  status ProductStatus @default(DRAFT)
+  price Decimal @db.Decimal(12,2)
+  salePrice Decimal? @db.Decimal(12,2)
+  currency String @default("MZN")
+  sku String
+  barcode String?
+  weight Decimal? @db.Decimal(10,3)
+  stock Int @default(0)
+  trackStock Boolean @default(true)
+  featured Boolean @default(false)
+  onSale Boolean @default(false)
+  brandId String?
+  brand Brand? @relation(fields:[brandId], references:[id], onDelete:SetNull)
+  categories ProductCategory[]
+  variants ProductVariant[]
+  images ProductImage[]
+  orderItems OrderItem[]
+  cartItems CartItem[]
+  reviews Review[]
+  wishlistItems WishlistItem[]
+  inventoryLevels InventoryLevel[]
+  stockMovements StockMovement[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, featured])
+  @@index([brandId, status])
+  @@index([createdAt])
+  @@unique([storeId, slug])
+  @@unique([storeId, sku])
+  @@index([storeId, status, createdAt])
+}
+model ProductVariant { id String @id @default(cuid()) storeId String store Store @relation(fields:[storeId],references:[id],onDelete:Cascade) productId String product Product @relation(fields:[productId],references:[id],onDelete:Cascade) name String sku String price Decimal? @db.Decimal(12,2) stock Int @default(0) attributes Json imageUrl String? active Boolean @default(true) cartItems CartItem[] orderItems OrderItem[] inventoryLevels InventoryLevel[] stockMovements StockMovement[] createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@unique([storeId,sku]) @@index([productId,active]) }
+model ProductImage { id String @id @default(cuid()) productId String product Product @relation(fields:[productId],references:[id],onDelete:Cascade) url String alt String sortOrder Int @default(0) primary Boolean @default(false) width Int? height Int? createdAt DateTime @default(now()) @@index([productId,sortOrder]) }
+model Category { id String @id @default(cuid()) storeId String store Store @relation(fields:[storeId],references:[id],onDelete:Cascade) name String slug String description String? imageUrl String? parentId String? parent Category? @relation("CategoryTree",fields:[parentId],references:[id],onDelete:SetNull) children Category[] @relation("CategoryTree") products ProductCategory[] active Boolean @default(true) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@unique([storeId,slug]) @@index([storeId,parentId,active]) }
+model ProductCategory { productId String categoryId String product Product @relation(fields:[productId],references:[id],onDelete:Cascade) category Category @relation(fields:[categoryId],references:[id],onDelete:Cascade) @@id([productId,categoryId]) }
+model Brand { id String @id @default(cuid()) storeId String store Store @relation(fields:[storeId],references:[id],onDelete:Cascade) name String slug String logoUrl String? description String? active Boolean @default(true) products Product[] createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@unique([storeId,slug]) @@index([storeId,active]) }
+model Cart { id String @id @default(cuid()) storeId String store Store @relation(fields:[storeId],references:[id],onDelete:Cascade) userId String? user User? @relation(fields:[userId],references:[id],onDelete:Cascade) sessionId String? items CartItem[] couponCode String? expiresAt DateTime? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([storeId,userId]) @@unique([storeId,sessionId]) }
+model CartItem { id String @id @default(cuid()) cartId String productId String variantId String? quantity Int @default(1) unitPrice Decimal @db.Decimal(12,2) cart Cart @relation(fields:[cartId],references:[id],onDelete:Cascade) product Product @relation(fields:[productId],references:[id],onDelete:Cascade) variant ProductVariant? @relation(fields:[variantId],references:[id],onDelete:Cascade) @@unique([cartId,productId,variantId]) }
+model Address { id String @id @default(cuid()) userId String user User @relation(fields:[userId],references:[id],onDelete:Cascade) label String? firstName String lastName String phone String address1 String address2 String? city String province String? postalCode String? country String @default("MZ") defaultShipping Boolean @default(false) defaultBilling Boolean @default(false) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([userId]) }
+model Order { id String @id @default(cuid()) storeId String store Store @relation(fields:[storeId],references:[id],onDelete:Restrict) number String channel SalesChannel @default(ONLINE) locationId String? location Location? @relation(fields:[locationId],references:[id],onDelete:SetNull) terminalId String? terminal PosTerminal? @relation(fields:[terminalId],references:[id],onDelete:SetNull) cashSessionId String? cashSession CashSession? @relation(fields:[cashSessionId],references:[id],onDelete:SetNull) cashierId String? cashier User? @relation("OrderCashier",fields:[cashierId],references:[id],onDelete:SetNull) userId String? user User? @relation(fields:[userId],references:[id],onDelete:SetNull) email String? status OrderStatus @default(PENDING) currency String @default("MZN") subtotal Decimal @db.Decimal(12,2) discount Decimal @default(0) @db.Decimal(12,2) shipping Decimal @default(0) @db.Decimal(12,2) tax Decimal @default(0) @db.Decimal(12,2) total Decimal @db.Decimal(12,2) shippingAddress Json? billingAddress Json? notes String? items OrderItem[] payments Payment[] shipment Shipment? couponUsages CouponUsage[] receipt Receipt? returns Return[] createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@unique([storeId,number]) @@index([storeId,userId,createdAt]) @@index([storeId,status,createdAt]) @@index([locationId,channel,createdAt]) @@index([cashSessionId,createdAt]) }
+model OrderItem { id String @id @default(cuid()) orderId String productId String? order Order @relation(fields:[orderId],references:[id],onDelete:Cascade) product Product? @relation(fields:[productId],references:[id],onDelete:SetNull) variantId String? variant ProductVariant? @relation(fields:[variantId],references:[id],onDelete:SetNull) name String sku String imageUrl String? quantity Int unitPrice Decimal @db.Decimal(12,2) total Decimal @db.Decimal(12,2) returnItems ReturnItem[] @@index([orderId]) }
+model Coupon { id String @id @default(cuid()) storeId String store Store @relation(fields:[storeId],references:[id],onDelete:Cascade) code String type CouponType value Decimal @db.Decimal(12,2) minPurchase Decimal? @db.Decimal(12,2) maxDiscount Decimal? @db.Decimal(12,2) usageLimit Int? perUserLimit Int? active Boolean @default(true) startsAt DateTime? endsAt DateTime? usages CouponUsage[] createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@unique([storeId,code]) @@index([storeId,active,startsAt,endsAt]) }
+model CouponUsage { id String @id @default(cuid()) couponId String userId String? orderId String coupon Coupon @relation(fields:[couponId],references:[id],onDelete:Restrict) user User? @relation(fields:[userId],references:[id],onDelete:SetNull) order Order @relation(fields:[orderId],references:[id],onDelete:Cascade) usedAt DateTime @default(now()) @@unique([couponId,orderId]) @@index([userId,couponId]) }
+model Banner { id String @id @default(cuid()) storeId String store Store @relation(fields:[storeId],references:[id],onDelete:Cascade) title String subtitle String? imageUrl String ctaLabel String? ctaUrl String? position String @default("home-hero") active Boolean @default(true) startsAt DateTime? endsAt DateTime? sortOrder Int @default(0) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([storeId,position,active,sortOrder]) }
+model Page { id String @id @default(cuid()) storeId String store Store @relation(fields:[storeId],references:[id],onDelete:Cascade) title String slug String excerpt String? content String published Boolean @default(false) seoTitle String? seoDescription String? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@unique([storeId,slug]) @@index([storeId,published]) }
+model StoreSettings { id String @id @default(cuid()) storeId String @unique store Store @relation(fields:[storeId],references:[id],onDelete:Cascade) name String @default("Inevia.shop") logoUrl String? email String? phone String? address String? currency String @default("MZN") socialLinks Json? paymentMethods Json shippingMethods Json taxRate Decimal @default(0) @db.Decimal(5,2) freeShippingAbove Decimal? @db.Decimal(12,2) updatedAt DateTime @updatedAt }
+model Review { id String @id @default(cuid()) storeId String store Store @relation(fields:[storeId],references:[id],onDelete:Cascade) productId String userId String product Product @relation(fields:[productId],references:[id],onDelete:Cascade) user User @relation(fields:[userId],references:[id],onDelete:Cascade) rating Int title String? comment String approved Boolean @default(false) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@unique([productId,userId]) @@index([storeId,productId,approved]) }
+model Wishlist { id String @id @default(cuid()) storeId String store Store @relation(fields:[storeId],references:[id],onDelete:Cascade) userId String user User @relation(fields:[userId],references:[id],onDelete:Cascade) items WishlistItem[] createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@unique([storeId,userId]) }
+model WishlistItem { id String @id @default(cuid()) wishlistId String productId String wishlist Wishlist @relation(fields:[wishlistId],references:[id],onDelete:Cascade) product Product @relation(fields:[productId],references:[id],onDelete:Cascade) createdAt DateTime @default(now()) @@unique([wishlistId,productId]) }
+model Payment { id String @id @default(cuid()) orderId String order Order @relation(fields:[orderId],references:[id],onDelete:Cascade) cashSessionId String? cashSession CashSession? @relation(fields:[cashSessionId],references:[id],onDelete:SetNull) processedById String? processedBy User? @relation(fields:[processedById],references:[id],onDelete:SetNull) method PaymentMethod status PaymentStatus @default(PENDING) providerReference String? idempotencyKey String? @unique amount Decimal @db.Decimal(12,2) amountTendered Decimal? @db.Decimal(12,2) changeGiven Decimal? @db.Decimal(12,2) currency String @default("MZN") metadata Json? paidAt DateTime? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([orderId,status]) @@index([cashSessionId,method,status]) }
+model Shipment { id String @id @default(cuid()) orderId String @unique order Order @relation(fields:[orderId],references:[id],onDelete:Cascade) status ShipmentStatus @default(PENDING) carrier String? method String trackingCode String? trackingUrl String? city String? cost Decimal @default(0) @db.Decimal(12,2) shippedAt DateTime? deliveredAt DateTime? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt @@index([status]) }
+
+// POS-ready structures remain optional for online orders, keeping e-commerce primary.
+model Location {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields:[storeId],references:[id],onDelete:Cascade)
+  name String
+  code String
+  type LocationType @default(STORE)
+  address Json?
+  phone String?
+  active Boolean @default(true)
+  terminals PosTerminal[]
+  inventoryLevels InventoryLevel[]
+  stockMovements StockMovement[]
+  orders Order[]
+  cashSessions CashSession[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([storeId,code])
+  @@index([storeId,type,active])
+}
+
+model PosTerminal {
+  id String @id @default(cuid())
+  locationId String
+  location Location @relation(fields:[locationId],references:[id],onDelete:Cascade)
+  name String
+  code String
+  active Boolean @default(true)
+  lastSeenAt DateTime?
+  cashSessions CashSession[]
+  orders Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([locationId,code])
+  @@index([locationId,active])
+}
+
+model InventoryLevel {
+  id String @id @default(cuid())
+  locationId String
+  location Location @relation(fields:[locationId],references:[id],onDelete:Cascade)
+  productId String
+  product Product @relation(fields:[productId],references:[id],onDelete:Cascade)
+  variantId String?
+  variant ProductVariant? @relation(fields:[variantId],references:[id],onDelete:Cascade)
+  sku String
+  available Int @default(0)
+  reserved Int @default(0)
+  incoming Int @default(0)
+  minimumLevel Int @default(0)
+  updatedAt DateTime @updatedAt
+  @@unique([locationId,sku])
+  @@index([productId,variantId])
+  @@index([locationId,available])
+}
+
+model StockMovement {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields:[storeId],references:[id],onDelete:Restrict)
+  locationId String
+  location Location @relation(fields:[locationId],references:[id],onDelete:Restrict)
+  productId String
+  product Product @relation(fields:[productId],references:[id],onDelete:Restrict)
+  variantId String?
+  variant ProductVariant? @relation(fields:[variantId],references:[id],onDelete:Restrict)
+  createdById String?
+  createdBy User? @relation(fields:[createdById],references:[id],onDelete:SetNull)
+  type StockMovementType
+  quantity Int
+  balanceAfter Int
+  referenceType String?
+  referenceId String?
+  notes String?
+  createdAt DateTime @default(now())
+  @@index([storeId,createdAt])
+  @@index([locationId,productId,variantId,createdAt])
+  @@index([referenceType,referenceId])
+}
+
+model CashSession {
+  id String @id @default(cuid())
+  locationId String
+  location Location @relation(fields:[locationId],references:[id],onDelete:Restrict)
+  terminalId String
+  terminal PosTerminal @relation(fields:[terminalId],references:[id],onDelete:Restrict)
+  openedById String
+  openedBy User @relation("CashSessionOpenedBy",fields:[openedById],references:[id],onDelete:Restrict)
+  closedById String?
+  closedBy User? @relation("CashSessionClosedBy",fields:[closedById],references:[id],onDelete:SetNull)
+  status CashSessionStatus @default(OPEN)
+  openingAmount Decimal @default(0) @db.Decimal(12,2)
+  expectedAmount Decimal? @db.Decimal(12,2)
+  countedAmount Decimal? @db.Decimal(12,2)
+  differenceAmount Decimal? @db.Decimal(12,2)
+  openedAt DateTime @default(now())
+  closedAt DateTime?
+  orders Order[]
+  payments Payment[]
+  movements CashMovement[]
+  @@index([terminalId,status])
+  @@index([locationId,openedAt])
+}
+
+model CashMovement {
+  id String @id @default(cuid())
+  cashSessionId String
+  cashSession CashSession @relation(fields:[cashSessionId],references:[id],onDelete:Restrict)
+  createdById String
+  createdBy User @relation(fields:[createdById],references:[id],onDelete:Restrict)
+  type CashMovementType
+  amount Decimal @db.Decimal(12,2)
+  reason String?
+  reference String?
+  createdAt DateTime @default(now())
+  @@index([cashSessionId,createdAt])
+}
+
+model Return {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields:[storeId],references:[id],onDelete:Restrict)
+  orderId String
+  order Order @relation(fields:[orderId],references:[id],onDelete:Restrict)
+  processedById String?
+  processedBy User? @relation(fields:[processedById],references:[id],onDelete:SetNull)
+  number String
+  status ReturnStatus @default(REQUESTED)
+  reason String
+  refundAmount Decimal @default(0) @db.Decimal(12,2)
+  items ReturnItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([storeId,number])
+  @@index([orderId,status])
+}
+
+model ReturnItem {
+  id String @id @default(cuid())
+  returnId String
+  return Return @relation(fields:[returnId],references:[id],onDelete:Cascade)
+  orderItemId String
+  orderItem OrderItem @relation(fields:[orderItemId],references:[id],onDelete:Restrict)
+  quantity Int
+  amount Decimal @db.Decimal(12,2)
+  restock Boolean @default(false)
+  condition String?
+  @@unique([returnId,orderItemId])
+}
+
+model Receipt {
+  id String @id @default(cuid())
+  storeId String
+  store Store @relation(fields:[storeId],references:[id],onDelete:Restrict)
+  orderId String @unique
+  order Order @relation(fields:[orderId],references:[id],onDelete:Restrict)
+  type ReceiptType @default(RECEIPT)
+  series String
+  sequentialNumber Int
+  fiscalNumber String?
+  customerTaxId String?
+  snapshot Json
+  issuedAt DateTime @default(now())
+  @@unique([storeId,series,sequentialNumber])
+}
