@@ -17,6 +17,12 @@ A instalação começa com uma única loja (`inevia-shop`), pertencente ao admin
 
 `CURRENT_STORE_SLUG` escolhe a loja apresentada pelo storefront nesta fase. Todo novo acesso à base deve obter o identificador através de `getCurrentStore()` e incluir `storeId` no filtro. Quando for aberto o registo de novas marcas, esse resolver poderá passar a usar o domínio ou subdomínio do pedido sem alterar a camada de catálogo. Pedidos usam eliminação restrita para preservar o histórico mesmo que uma loja seja desactivada.
 
+### Core preparado para PVD/POS futuro
+
+O e-commerce continua a ser o produto principal. As estruturas de ponto de venda são opcionais: pedidos online funcionam sem localização, terminal, turno ou operador. Para uma futura aplicação `/pos`, o schema já contém localizações e armazéns (`Location`), terminais (`PosTerminal`), stock por localização (`InventoryLevel`), razão imutável de movimentos (`StockMovement`), turnos e movimentos de caixa (`CashSession` e `CashMovement`), pagamentos mistos, recibos e devoluções. `Order.channel` separa vendas `ONLINE`, `POS`, `ADMIN` e `MARKETPLACE` sem duplicar o motor de pedidos.
+
+O seed cria somente a loja Inevia.shop e o seu armazém online; não activa terminais nem fluxos POS. `Product.stock` permanece como total compatível com o storefront nesta fase, enquanto `InventoryLevel` prepara a transição para stock por filial. Quando o POS for implementado, alterações de saldo deverão ocorrer numa transacção e gerar sempre um `StockMovement`; movimentos financeiros e documentos emitidos nunca devem ser apagados, apenas revertidos por novos registos.
+
 Não existe dependência do BigCommerce, Shopify ou CMS externo. O padrão visual e de navegação é inspirado no Next.js Commerce, mas a persistência pertence integralmente à aplicação.
 
 ## Instalação local
