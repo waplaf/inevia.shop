@@ -1,0 +1,1 @@
+"use client";export default function ErrorPage({reset}:{reset:()=>void}){return <main className="grid min-h-[70vh] place-items-center p-6 text-center"><div><h1 className="text-3xl font-black">Algo não correu bem</h1><p className="mt-3 muted">Não foi possível carregar esta página.</p><button onClick={reset} className="btn btn-primary mt-6">Tentar novamente</button></div></main>}

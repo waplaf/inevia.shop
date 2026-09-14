@@ -1,0 +1,1 @@
+import {describe,expect,it} from "vitest";import {money} from "./catalog";describe("catalog",()=>{it("formats metical prices",()=>expect(money(1000)).toContain("1"));it("formats zero without losing the currency",()=>expect(money(0)).toMatch(/MZN|MT/))});
